@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <chrono>
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -7,176 +9,139 @@
 
 #include "Utils.h"
 
-enum Part { One, Two };
+enum Part
+{
+    One,
+    Two
+};
 constexpr Part PART = Part::Two;
 
-unsigned long long FindReflections(const std::vector<std::string>& pattern) {
-  unsigned long long ans = 0;
-  int numCols = pattern.begin()->size();
-  int numRows = pattern.size();
-  for (int v = 0; v < numCols - 1; v++) {
-    int len = std::min(v + 1, numCols - v - 1);
-    bool isReflection = true;
-    for (int row = 0; row < numRows; row++) {
-      int offset = 0;
-      while (offset != len) {
-        if (pattern[row][v - offset] != pattern[row][v + offset + 1]) {
-          isReflection = false;
-          goto checkedVReflection;
+void Part1(int argc, char **argv)
+{
+    std::ifstream inFile(argv[1]);
+    std::string line;
+
+    unsigned long long ans = 0;
+
+    while (std::getline(inFile, line))
+    {
+        if (line == "")
+        {
+            continue;
         }
-        offset++;
-      }
-    }
+        auto s = Split(line, ",");
+        std::vector<int> A = {std::stoi(Split(s[0], "+")[1]), std::stoi(Split(s[1], "+")[1])};
 
-  checkedVReflection:
-    if (isReflection) {
-      ans += v + 1;
-    }
-  }
+        std::getline(inFile, line);
+        s = Split(line, ",");
+        std::vector<int> B = {std::stoi(Split(s[0], "+")[1]), std::stoi(Split(s[1], "+")[1])};
 
-  for (int h = 0; h < numRows - 1; h++) {
-    int len = std::min(h + 1, numRows - h - 1);
-    bool isReflection = true;
-    for (int col = 0; col < numCols; col++) {
-      int offset = 0;
-      while (offset != len) {
-        if (pattern[h - offset][col] != pattern[h + offset + 1][col]) {
-          isReflection = false;
-          goto checkedHReflection;
+        std::getline(inFile, line);
+        s = Split(line, ",");
+        std::vector<int> Dest = {std::stoi(Split(s[0], "=")[1]), std::stoi(Split(s[1], "=")[1])};
+
+        auto det = A[0] * B[1] - A[1] * B[0];
+        if (det == 0)
+        {
+            std::cout << "No solution\n";
+            continue;
         }
-        offset++;
-      }
+
+        auto A_tokens = (Dest[0] * B[1] - Dest[1] * B[0]) / det;
+        auto B_tokens = (A[0] * Dest[1] - A[1] * Dest[0]) / det;
+
+        // So solving the linear equations can lead to decimal answers for tokens which should be ignored for this
+        // problem Two was I can think to solve this are 1) make the A/B_tokens calculations doubles and check if the
+        // result is an int or just check if plugging in the rounded token values in the lienar equations give the
+        // correct values.
+        // Im choosing to do the latter solution, have a feeling double conversions may be slower? But more importantly
+        // I dont wanna deal with double rounding and other issues. Can confirm perfromance later.
+        if (A_tokens * A[0] + B_tokens * B[0] == Dest[0] && A_tokens * A[1] + B_tokens * B[1] == Dest[1])
+        {
+            std::cout << A_tokens << " " << B_tokens << std::endl;
+            ans += 3 * A_tokens + 1 * B_tokens;
+        }
+        else
+        {
+            std::cout << "No integer solution\n";
+        }
     }
 
-  checkedHReflection:
-    if (isReflection) {
-      ans += (h + 1) * 100;
-    }
-  }
-  return ans;
+    std::cout << std::endl << ans << std::endl;
 }
 
-void Part1(int argc, char** argv) {
-  std::ifstream inFile(argv[1]);
-  std::string line;
+void Part2(int argc, char **argv)
+{
+    std::ifstream inFile(argv[1]);
+    std::string line;
 
-  unsigned long long ans = 0;
-  std::vector<std::string> pattern;
-  while (std::getline(inFile, line)) {
-    if (line == "") {
-      ans += FindReflections(pattern);
-      pattern.clear();
-      continue;
-    }
-    pattern.emplace_back(line);
-  }
-  ans += FindReflections(pattern);
+    unsigned long long ans = 0;
 
-  std::cout << ans << std::endl;
-}
-
-struct Point {
-  int x;
-  int y;
-  bool operator==(const Point& p) const {
-    return std::tie(p.x, p.y) == std::tie(x, y);
-  }
-};
-
-template <>
-struct std::hash<Point> {
-  std::size_t operator()(const Point& p) const {
-    using std::hash;
-    using std::size_t;
-    auto h = hash<int>()(p.x);
-    h ^= hash<int>()(p.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-
-unsigned long long FindReflections2(const std::vector<std::string>& pattern) {
-  unsigned long long ans = 0;
-  int numCols = pattern.begin()->size();
-  int numRows = pattern.size();
-  std::unordered_map<Point, int> count;
-  for (int v = 0; v < numCols - 1; v++) {
-    int numWrong = 0;
-    int len = std::min(v + 1, numCols - v - 1);
-    bool isReflection = true;
-    for (int row = 0; row < numRows; row++) {
-      int offset = 0;
-      while (offset != len) {
-        if (pattern[row][v - offset] != pattern[row][v + offset + 1]) {
-          isReflection = false;
-          numWrong++;
+    while (std::getline(inFile, line))
+    {
+        if (line == "")
+        {
+            continue;
         }
-        offset++;
-      }
-    }
-    // std::cout << "V: " << v << " NumWrong: " << numWrong << std::endl;
+        auto s = Split(line, ",");
+        std::vector<long long> A = {std::stoll(Split(s[0], "+")[1]), std::stoll(Split(s[1], "+")[1])};
 
-  checkedVReflection:
-    if (numWrong == 1) {
-      ans += v + 1;
-    }
-  }
+        std::getline(inFile, line);
+        s = Split(line, ",");
+        std::vector<long long> B = {std::stoll(Split(s[0], "+")[1]), std::stoll(Split(s[1], "+")[1])};
 
-  for (int h = 0; h < numRows - 1; h++) {
-    int len = std::min(h + 1, numRows - h - 1);
-    bool isReflection = true;
-    int numWrong = 0;
-    for (int col = 0; col < numCols; col++) {
-      int offset = 0;
-      while (offset != len) {
-        if (pattern[h - offset][col] != pattern[h + offset + 1][col]) {
-          isReflection = false;
-          numWrong++;
+        std::getline(inFile, line);
+        s = Split(line, ",");
+        std::vector<long long> Dest = {10000000000000LL + std::stoll(Split(s[0], "=")[1]),
+                                       10000000000000LL + std::stoll(Split(s[1], "=")[1])};
+
+        long long det = A[0] * B[1] - A[1] * B[0];
+        if (det == 0)
+        {
+            std::cout << "No solution\n";
+            continue;
         }
-        offset++;
-      }
+
+        long long A_tokens = (Dest[0] * B[1] - Dest[1] * B[0]) / det;
+        long long B_tokens = (A[0] * Dest[1] - A[1] * Dest[0]) / det;
+
+        // So solving the linear equations can lead to decimal answers for tokens which should be ignored for this
+        // problem Two was I can think to solve this are 1) make the A/B_tokens calculations doubles and check if the
+        // result is an int or just check if plugging in the rounded token values in the lienar equations give the
+        // correct values.
+        // Im choosing to do the latter solution, have a feeling double conversions may be slower? But more importantly
+        // I dont wanna deal with double rounding and other issues. Can confirm perfromance later.
+        if (A_tokens * A[0] + B_tokens * B[0] == Dest[0] && A_tokens * A[1] + B_tokens * B[1] == Dest[1])
+        {
+            std::cout << A_tokens << " " << B_tokens << std::endl;
+            ans += 3 * A_tokens + 1 * B_tokens;
+        }
+        else
+        {
+            std::cout << "No integer solution\n";
+        }
     }
 
-    // std::cout << "H: " << h << " NumWrong: " << numWrong << std::endl;
-  checkedHReflection:
-    if (numWrong == 1) {
-      ans += (h + 1) * 100;
-    }
-  }
-  return ans;
+    std::cout << std::endl << ans << std::endl;
 }
 
-void Part2(int argc, char** argv) {
-  std::ifstream inFile(argv[1]);
-  std::string line;
-
-  unsigned long long ans = 0;
-  std::vector<std::string> pattern;
-  while (std::getline(inFile, line)) {
-    if (line == "") {
-      ans += FindReflections2(pattern);
-      pattern.clear();
-      continue;
+int main(int argc, char **argv)
+{
+    if (argc != 2)
+    {
+        return 1;
     }
-    pattern.emplace_back(line);
-  }
-  ans += FindReflections2(pattern);
 
-  std::cout << ans << std::endl;
-}
-
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    return 1;
-  }
-
-  auto start = std::chrono::high_resolution_clock::now();
-  if (PART == Part::One) {
-    Part1(argc, argv);
-  } else if (PART == Part::Two) {
-    Part2(argc, argv);
-  }
-  auto end = std::chrono::high_resolution_clock::now();
-  auto duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-  std::cout << duration.count() << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
+    if (PART == Part::One)
+    {
+        Part1(argc, argv);
+    }
+    else if (PART == Part::Two)
+    {
+        Part2(argc, argv);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << duration.count() << std::endl;
 }
